@@ -6,6 +6,7 @@ import { ARButton } from 'three/addons/webxr/ARButton.js';
 let scene, camera, renderer, controls;
 let mushrooms = [];
 let arMode = false;
+let glassLandscape = null;
 
 init();
 animate();
@@ -60,11 +61,119 @@ function init() {
     ground.receiveShadow = true;
     scene.add(ground);
 
+    // Add glass landscape
+    glassLandscape = createGlassLandscape();
+
     // Add some initial mushrooms
     addMushroomCluster();
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
+}
+
+function createGlassLandscape() {
+    const landscapeGroup = new THREE.Group();
+
+    // Define the layers with different shapes and sizes to create topographic effect
+    const layers = [
+        // Bottom layers (larger, more spread out)
+        { points: generateContourPoints(3.5, 0.8, 12), height: 0.05, scale: 1.0 },
+        { points: generateContourPoints(3.3, 0.7, 12), height: 0.15, scale: 0.95 },
+        { points: generateContourPoints(3.0, 0.6, 11), height: 0.28, scale: 0.88 },
+        { points: generateContourPoints(2.7, 0.55, 11), height: 0.43, scale: 0.80 },
+        { points: generateContourPoints(2.4, 0.5, 10), height: 0.60, scale: 0.72 },
+        { points: generateContourPoints(2.1, 0.45, 10), height: 0.79, scale: 0.64 },
+        { points: generateContourPoints(1.8, 0.4, 9), height: 1.00, scale: 0.56 },
+        { points: generateContourPoints(1.5, 0.35, 9), height: 1.23, scale: 0.48 },
+        { points: generateContourPoints(1.2, 0.3, 8), height: 1.48, scale: 0.40 },
+        { points: generateContourPoints(0.9, 0.25, 8), height: 1.75, scale: 0.32 },
+        // Top layers (smaller, creating peak)
+        { points: generateContourPoints(0.7, 0.2, 7), height: 2.04, scale: 0.25 },
+        { points: generateContourPoints(0.5, 0.15, 7), height: 2.35, scale: 0.18 },
+        { points: generateContourPoints(0.35, 0.1, 6), height: 2.68, scale: 0.12 },
+        { points: generateContourPoints(0.22, 0.08, 6), height: 3.03, scale: 0.08 },
+    ];
+
+    layers.forEach((layer, index) => {
+        const glassLayer = createGlassLayer(layer.points, layer.height, index);
+        landscapeGroup.add(glassLayer);
+    });
+
+    landscapeGroup.position.set(-3, 0, -2);
+    scene.add(landscapeGroup);
+
+    return landscapeGroup;
+}
+
+function generateContourPoints(baseRadius, variation, segments) {
+    const points = [];
+
+    for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+
+        // Create organic mountain-like contours with multiple frequency variations
+        const noise1 = Math.sin(angle * 3) * 0.3;
+        const noise2 = Math.sin(angle * 5) * 0.15;
+        const noise3 = Math.cos(angle * 2) * 0.2;
+
+        const radius = baseRadius + (noise1 + noise2 + noise3) * variation;
+
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+
+        points.push(new THREE.Vector2(x, y));
+    }
+
+    return points;
+}
+
+function createGlassLayer(points, height, layerIndex) {
+    // Create shape from points
+    const shape = new THREE.Shape(points);
+
+    // Extrude settings for thin glass sheet
+    const extrudeSettings = {
+        depth: 0.03,
+        bevelEnabled: true,
+        bevelThickness: 0.01,
+        bevelSize: 0.01,
+        bevelSegments: 2
+    };
+
+    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+    // Glass material with cyan/teal color and transparency
+    const material = new THREE.MeshPhysicalMaterial({
+        color: 0x40e0d0, // Turquoise/cyan color
+        transparent: true,
+        opacity: 0.35,
+        roughness: 0.05,
+        metalness: 0.1,
+        transmission: 0.9, // Glass-like light transmission
+        thickness: 0.5,
+        envMapIntensity: 1.0,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        side: THREE.DoubleSide,
+        depthWrite: false, // Important for proper transparency rendering
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.y = height;
+    mesh.rotation.x = Math.PI / 2; // Rotate to be horizontal
+
+    // Add black contour edges like in the reference image
+    const edges = new THREE.EdgesGeometry(geometry);
+    const lineMaterial = new THREE.LineBasicMaterial({
+        color: 0x000000,
+        linewidth: 2,
+        transparent: true,
+        opacity: 0.6
+    });
+    const wireframe = new THREE.LineSegments(edges, lineMaterial);
+    mesh.add(wireframe);
+
+    return mesh;
 }
 
 function createMushroom(x, y, z, scale = 1, colorScheme = null) {
@@ -209,6 +318,12 @@ function clearMushrooms() {
     mushrooms = [];
 }
 
+function toggleLandscape() {
+    if (glassLandscape) {
+        glassLandscape.visible = !glassLandscape.visible;
+    }
+}
+
 function startAR() {
     if ('xr' in navigator) {
         navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
@@ -261,4 +376,5 @@ function render() {
 window.addRandomMushroom = addRandomMushroom;
 window.addMushroomCluster = addMushroomCluster;
 window.clearMushrooms = clearMushrooms;
+window.toggleLandscape = toggleLandscape;
 window.startAR = startAR;
