@@ -8,6 +8,14 @@ let mushrooms = [];
 let arMode = false;
 let glassLandscape = null;
 
+// Hand tracking variables
+let handTrackingActive = false;
+let hands, webcamCamera;
+let previousHandPosition = null;
+let handMovementThreshold = 0.05;
+let throwCooldown = 0;
+let flyingMushrooms = [];
+
 init();
 animate();
 
@@ -369,7 +377,222 @@ function render() {
         mushroom.position.y = Math.sin(time + offset) * 0.05;
     });
 
+    // Update flying mushrooms physics
+    updateFlyingMushrooms();
+
+    // Decrease throw cooldown
+    if (throwCooldown > 0) {
+        throwCooldown -= 0.016; // Approximately 1/60th of a second
+    }
+
     renderer.render(scene, camera);
+}
+
+// Hand tracking functions
+function toggleHandTracking() {
+    if (!handTrackingActive) {
+        startHandTracking();
+    } else {
+        stopHandTracking();
+    }
+}
+
+async function startHandTracking() {
+    try {
+        // Request camera access
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480 }
+        });
+
+        const videoElement = document.getElementById('webcam-preview');
+        videoElement.srcObject = stream;
+
+        // Show video container and status
+        document.getElementById('video-container').style.display = 'block';
+        document.getElementById('hand-status').style.display = 'block';
+
+        // Initialize MediaPipe Hands
+        hands = new Hands({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+            }
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onHandsResults);
+
+        // Setup camera
+        webcamCamera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+
+        webcamCamera.start();
+        handTrackingActive = true;
+
+        // Update button text
+        const button = document.querySelector('button[onclick="toggleHandTracking()"]');
+        if (button) {
+            button.textContent = 'Stop Hand Tracking';
+            button.style.background = '#f44336';
+        }
+
+    } catch (error) {
+        console.error('Error starting hand tracking:', error);
+        alert('Could not access camera. Please ensure camera permissions are granted.');
+    }
+}
+
+function stopHandTracking() {
+    if (webcamCamera) {
+        webcamCamera.stop();
+    }
+
+    const videoElement = document.getElementById('webcam-preview');
+    if (videoElement.srcObject) {
+        videoElement.srcObject.getTracks().forEach(track => track.stop());
+    }
+
+    document.getElementById('video-container').style.display = 'none';
+    document.getElementById('hand-status').style.display = 'none';
+
+    handTrackingActive = false;
+    previousHandPosition = null;
+
+    // Update button text
+    const button = document.querySelector('button[onclick="toggleHandTracking()"]');
+    if (button) {
+        button.textContent = 'Start Hand Tracking';
+        button.style.background = '#4CAF50';
+    }
+}
+
+function onHandsResults(results) {
+    if (!results.landmarks || results.landmarks.length === 0) {
+        previousHandPosition = null;
+        return;
+    }
+
+    // Get the palm center (landmark 9 is middle of palm)
+    const palmLandmark = results.landmarks[0][9];
+    const currentHandPosition = {
+        x: palmLandmark.x,
+        y: palmLandmark.y,
+        z: palmLandmark.z || 0
+    };
+
+    // Calculate movement if we have a previous position
+    if (previousHandPosition && throwCooldown <= 0) {
+        const dx = currentHandPosition.x - previousHandPosition.x;
+        const dy = currentHandPosition.y - previousHandPosition.y;
+        const dz = currentHandPosition.z - previousHandPosition.z;
+
+        const movement = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+        // If hand moved significantly, throw a mushroom
+        if (movement > handMovementThreshold) {
+            throwMushroomInDirection(dx, dy, dz, movement);
+            throwCooldown = 0.5; // Half second cooldown
+        }
+    }
+
+    previousHandPosition = currentHandPosition;
+}
+
+function throwMushroomInDirection(dx, dy, dz, speed) {
+    // Create a mushroom at camera position
+    const mushroomGroup = new THREE.Group();
+
+    const scale = 0.5;
+    const colors = { cap: 0xff4444, spots: 0xffffff, stem: 0xffeecc };
+
+    // Create simplified mushroom for throwing
+    const stemGeometry = new THREE.CylinderGeometry(0.15 * scale, 0.2 * scale, 1 * scale, 8);
+    const stemMaterial = new THREE.MeshStandardMaterial({ color: colors.stem });
+    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+    stem.position.y = 0.5 * scale;
+    stem.castShadow = true;
+    mushroomGroup.add(stem);
+
+    const capGeometry = new THREE.SphereGeometry(0.5 * scale, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const capMaterial = new THREE.MeshStandardMaterial({ color: colors.cap });
+    const cap = new THREE.Mesh(capGeometry, capMaterial);
+    cap.position.y = 1 * scale;
+    cap.castShadow = true;
+    mushroomGroup.add(cap);
+
+    // Position at camera location
+    mushroomGroup.position.copy(camera.position);
+
+    // Calculate throw direction (invert x for mirror effect and flip y)
+    const throwSpeed = speed * 30;
+    const velocity = new THREE.Vector3(
+        -dx * throwSpeed, // Invert x for natural mirror movement
+        -dy * throwSpeed, // Invert y because screen coordinates are flipped
+        -10 // Always throw forward into the scene
+    );
+
+    // Store velocity and acceleration
+    mushroomGroup.userData.velocity = velocity;
+    mushroomGroup.userData.acceleration = new THREE.Vector3(0, -9.8, 0); // Gravity
+
+    scene.add(mushroomGroup);
+    flyingMushrooms.push(mushroomGroup);
+    mushrooms.push(mushroomGroup);
+}
+
+function updateFlyingMushrooms() {
+    const deltaTime = 0.016; // Approximately 1/60th of a second
+
+    for (let i = flyingMushrooms.length - 1; i >= 0; i--) {
+        const mushroom = flyingMushrooms[i];
+
+        // Apply acceleration to velocity
+        mushroom.userData.velocity.add(
+            mushroom.userData.acceleration.clone().multiplyScalar(deltaTime)
+        );
+
+        // Apply velocity to position
+        mushroom.position.add(
+            mushroom.userData.velocity.clone().multiplyScalar(deltaTime)
+        );
+
+        // Add rotation for visual effect
+        mushroom.rotation.x += mushroom.userData.velocity.length() * deltaTime;
+        mushroom.rotation.z += mushroom.userData.velocity.length() * deltaTime * 0.5;
+
+        // Remove if it falls below ground or goes too far
+        if (mushroom.position.y < -5 || mushroom.position.length() > 100) {
+            scene.remove(mushroom);
+            flyingMushrooms.splice(i, 1);
+            const mushroomIndex = mushrooms.indexOf(mushroom);
+            if (mushroomIndex > -1) {
+                mushrooms.splice(mushroomIndex, 1);
+            }
+        } else if (mushroom.position.y <= 0 && mushroom.userData.velocity.y < 0) {
+            // Bounce on ground
+            mushroom.userData.velocity.y *= -0.5; // Bounce with energy loss
+            mushroom.position.y = 0;
+
+            // Slow down horizontal movement on bounce
+            mushroom.userData.velocity.x *= 0.8;
+            mushroom.userData.velocity.z *= 0.8;
+
+            // Stop tracking as flying if it's moving too slowly
+            if (mushroom.userData.velocity.length() < 1) {
+                flyingMushrooms.splice(i, 1);
+            }
+        }
+    }
 }
 
 // Make functions globally available
@@ -377,4 +600,5 @@ window.addRandomMushroom = addRandomMushroom;
 window.addMushroomCluster = addMushroomCluster;
 window.clearMushrooms = clearMushrooms;
 window.toggleLandscape = toggleLandscape;
+window.toggleHandTracking = toggleHandTracking;
 window.startAR = startAR;

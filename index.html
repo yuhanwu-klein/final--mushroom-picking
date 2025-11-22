@@ -54,14 +54,56 @@
             font-size: 12px;
             z-index: 100;
         }
+        #video-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            height: 240px;
+            border: 3px solid #4CAF50;
+            border-radius: 10px;
+            overflow: hidden;
+            z-index: 100;
+            display: none;
+        }
+        #webcam-preview {
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+        #hand-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #hand-status {
+            position: absolute;
+            bottom: 60px;
+            left: 20px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 100;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
+    <div id="video-container">
+        <video id="webcam-preview" autoplay playsinline></video>
+        <canvas id="hand-canvas"></canvas>
+    </div>
+    <div id="hand-status">Hand Tracking: Active</div>
 
     <div id="controls">
         <h3 style="margin-top: 0;">AR Glass Landscape</h3>
         <button onclick="toggleLandscape()">Toggle Glass Landscape</button>
+        <button onclick="toggleHandTracking()">Start Hand Tracking</button>
         <button onclick="addRandomMushroom()">Add Random Mushroom</button>
         <button onclick="addMushroomCluster()">Add Cluster</button>
         <button onclick="clearMushrooms()">Clear All</button>
@@ -69,8 +111,14 @@
     </div>
 
     <div id="info">
-        Click to add mushrooms | Drag to rotate view | Scroll to zoom
+        Click to add mushrooms | Drag to rotate | Scroll to zoom | Use hand tracking to throw mushrooms!
     </div>
+
+    <!-- MediaPipe Hands Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <script type="importmap">
         {
