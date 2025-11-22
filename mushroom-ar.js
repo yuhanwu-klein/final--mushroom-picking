@@ -10,7 +10,7 @@ let glassLandscape = null;
 
 // Hand tracking variables
 let handTrackingActive = false;
-let hands, webcamCamera;
+let hands;
 let previousHandPosition = null;
 let handMovementThreshold = 0.05;
 let throwCooldown = 0;
@@ -401,15 +401,29 @@ async function startHandTracking() {
     try {
         // Request camera access
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480 }
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: 'user'
+            }
         });
 
         const videoElement = document.getElementById('webcam-preview');
         videoElement.srcObject = stream;
 
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+            videoElement.onloadedmetadata = () => {
+                videoElement.play();
+                resolve();
+            };
+        });
+
         // Show video container and status
         document.getElementById('video-container').style.display = 'block';
         document.getElementById('hand-status').style.display = 'block';
+
+        console.log('Camera started, initializing MediaPipe Hands...');
 
         // Initialize MediaPipe Hands
         hands = new Hands({
@@ -427,17 +441,20 @@ async function startHandTracking() {
 
         hands.onResults(onHandsResults);
 
-        // Setup camera
-        webcamCamera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480
-        });
+        console.log('MediaPipe Hands initialized, starting frame processing...');
 
-        webcamCamera.start();
+        // Process video frames manually
+        async function processFrame() {
+            if (handTrackingActive && videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                await hands.send({ image: videoElement });
+            }
+            if (handTrackingActive) {
+                requestAnimationFrame(processFrame);
+            }
+        }
+
         handTrackingActive = true;
+        processFrame();
 
         // Update button text
         const button = document.querySelector('button[onclick="toggleHandTracking()"]');
@@ -446,26 +463,26 @@ async function startHandTracking() {
             button.style.background = '#f44336';
         }
 
+        console.log('Hand tracking started successfully!');
+
     } catch (error) {
         console.error('Error starting hand tracking:', error);
-        alert('Could not access camera. Please ensure camera permissions are granted.');
+        alert('Could not access camera. Please ensure camera permissions are granted.\nError: ' + error.message);
     }
 }
 
 function stopHandTracking() {
-    if (webcamCamera) {
-        webcamCamera.stop();
-    }
+    handTrackingActive = false;
 
     const videoElement = document.getElementById('webcam-preview');
     if (videoElement.srcObject) {
         videoElement.srcObject.getTracks().forEach(track => track.stop());
+        videoElement.srcObject = null;
     }
 
     document.getElementById('video-container').style.display = 'none';
     document.getElementById('hand-status').style.display = 'none';
 
-    handTrackingActive = false;
     previousHandPosition = null;
 
     // Update button text
@@ -474,13 +491,72 @@ function stopHandTracking() {
         button.textContent = 'Start Hand Tracking';
         button.style.background = '#4CAF50';
     }
+
+    console.log('Hand tracking stopped');
+}
+
+// Helper function to draw hand connections
+function drawHandConnections(ctx, landmarks, width, height) {
+    const connections = [
+        [0, 1], [1, 2], [2, 3], [3, 4],  // Thumb
+        [0, 5], [5, 6], [6, 7], [7, 8],  // Index
+        [0, 9], [9, 10], [10, 11], [11, 12],  // Middle
+        [0, 13], [13, 14], [14, 15], [15, 16],  // Ring
+        [0, 17], [17, 18], [18, 19], [19, 20],  // Pinky
+        [5, 9], [9, 13], [13, 17]  // Palm
+    ];
+
+    ctx.strokeStyle = '#00FF00';
+    ctx.lineWidth = 2;
+
+    for (const [start, end] of connections) {
+        const startPoint = landmarks[start];
+        const endPoint = landmarks[end];
+
+        ctx.beginPath();
+        ctx.moveTo(startPoint.x * width, startPoint.y * height);
+        ctx.lineTo(endPoint.x * width, endPoint.y * height);
+        ctx.stroke();
+    }
+}
+
+// Helper function to draw hand landmarks
+function drawHandLandmarks(ctx, landmarks, width, height) {
+    ctx.fillStyle = '#FF0000';
+
+    for (const landmark of landmarks) {
+        ctx.beginPath();
+        ctx.arc(landmark.x * width, landmark.y * height, 3, 0, 2 * Math.PI);
+        ctx.fill();
+    }
 }
 
 function onHandsResults(results) {
+    // Draw hand landmarks on canvas for visual feedback
+    const canvasElement = document.getElementById('hand-canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    canvasElement.width = canvasElement.offsetWidth;
+    canvasElement.height = canvasElement.offsetHeight;
+
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
     if (!results.landmarks || results.landmarks.length === 0) {
         previousHandPosition = null;
+        canvasCtx.restore();
         return;
     }
+
+    // Draw hand landmarks
+    if (results.landmarks) {
+        for (const landmarks of results.landmarks) {
+            drawHandConnections(canvasCtx, landmarks, canvasElement.width, canvasElement.height);
+            drawHandLandmarks(canvasCtx, landmarks, canvasElement.width, canvasElement.height);
+        }
+    }
+
+    canvasCtx.restore();
 
     // Get the palm center (landmark 9 is middle of palm)
     const palmLandmark = results.landmarks[0][9];
@@ -500,6 +576,7 @@ function onHandsResults(results) {
 
         // If hand moved significantly, throw a mushroom
         if (movement > handMovementThreshold) {
+            console.log(`Hand moved! Distance: ${movement.toFixed(3)}, throwing mushroom`);
             throwMushroomInDirection(dx, dy, dz, movement);
             throwCooldown = 0.5; // Half second cooldown
         }
