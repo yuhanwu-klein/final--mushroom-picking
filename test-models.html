@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test USDZ Models</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+
+        .model-container {
+            width: 100%;
+            max-width: 800px;
+            height: 500px;
+            margin: 20px auto;
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            background: #333;
+            border-radius: 8px;
+        }
+
+        .info {
+            text-align: center;
+            padding: 10px;
+            margin: 10px auto;
+            max-width: 800px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .loading {
+            background: #FF9800;
+        }
+
+        .loaded {
+            background: #4CAF50;
+        }
+
+        .error {
+            background: #F44336;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #2196F3;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <h1>USDZ Model Test Page</h1>
+
+    <div class="info">
+        <h2>Mushroom Pack</h2>
+        <div id="mushroom-status" class="status loading">Loading...</div>
+    </div>
+
+    <div class="model-container">
+        <model-viewer
+            id="mushroom-model"
+            src="mushroom_pack_1024.usdz"
+            alt="Mushroom pack model"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            camera-controls
+            auto-rotate
+            rotation-per-second="30deg"
+            shadow-intensity="1"
+            exposure="1.5"
+            ios-src="mushroom_pack_1024.usdz">
+            <button slot="ar-button" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+                View in AR
+            </button>
+        </model-viewer>
+    </div>
+
+    <div class="info">
+        <h2>Forest Slope</h2>
+        <div id="forest-status" class="status loading">Loading...</div>
+    </div>
+
+    <div class="model-container">
+        <model-viewer
+            id="forest-model"
+            src="slope_in_the_forest_1024.usdz"
+            alt="Forest slope model"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            camera-controls
+            auto-rotate
+            rotation-per-second="15deg"
+            shadow-intensity="1"
+            exposure="1.2"
+            ios-src="slope_in_the_forest_1024.usdz">
+            <button slot="ar-button" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+                View in AR
+            </button>
+        </model-viewer>
+    </div>
+
+    <div class="info">
+        <button onclick="window.location.href='vr-forest.html'">Go to VR Forest Scene</button>
+        <button onclick="window.location.href='index.html'">Go to Main Page</button>
+        <button onclick="location.reload()">Reload Page</button>
+    </div>
+
+    <div class="info" style="font-size: 12px; color: #888;">
+        <p>Check the browser console (F12) for detailed loading information.</p>
+        <p>If you see a black screen, the model might be loading or there might be compatibility issues.</p>
+        <p><strong>Best viewed on:</strong> Safari (iOS/macOS), Chrome (Android), or modern browsers with WebXR support.</p>
+    </div>
+
+    <script>
+        const mushroomModel = document.getElementById('mushroom-model');
+        const forestModel = document.getElementById('forest-model');
+        const mushroomStatus = document.getElementById('mushroom-status');
+        const forestStatus = document.getElementById('forest-status');
+
+        // Mushroom model events
+        mushroomModel.addEventListener('load', () => {
+            console.log('✓ Mushroom model loaded successfully');
+            mushroomStatus.textContent = 'Loaded ✓';
+            mushroomStatus.className = 'status loaded';
+        });
+
+        mushroomModel.addEventListener('error', (event) => {
+            console.error('✗ Error loading mushroom model:', event);
+            mushroomStatus.textContent = 'Error ✗';
+            mushroomStatus.className = 'status error';
+        });
+
+        mushroomModel.addEventListener('progress', (event) => {
+            const progress = event.detail.totalProgress * 100;
+            console.log(`Mushroom model loading: ${progress.toFixed(0)}%`);
+            mushroomStatus.textContent = `Loading ${progress.toFixed(0)}%`;
+        });
+
+        // Forest model events
+        forestModel.addEventListener('load', () => {
+            console.log('✓ Forest model loaded successfully');
+            forestStatus.textContent = 'Loaded ✓';
+            forestStatus.className = 'status loaded';
+        });
+
+        forestModel.addEventListener('error', (event) => {
+            console.error('✗ Error loading forest model:', event);
+            forestStatus.textContent = 'Error ✗';
+            forestStatus.className = 'status error';
+        });
+
+        forestModel.addEventListener('progress', (event) => {
+            const progress = event.detail.totalProgress * 100;
+            console.log(`Forest model loading: ${progress.toFixed(0)}%`);
+            forestStatus.textContent = `Loading ${progress.toFixed(0)}%`;
+        });
+
+        console.log('Model test page initialized');
+        console.log('Model files:');
+        console.log('- mushroom_pack_1024.usdz');
+        console.log('- slope_in_the_forest_1024.usdz');
+    </script>
+</body>
+</html>

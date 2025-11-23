@@ -11,22 +11,19 @@
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #2d5016 0%, #1a3010 100%);
-            overflow-x: hidden;
+            overflow: hidden;
         }
 
         .scene-container {
             position: relative;
             width: 100vw;
             height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         model-viewer {
             width: 100%;
             height: 100%;
-            background-color: transparent;
+            --progress-bar-color: #4CAF50;
         }
 
         #forest-background {
@@ -40,14 +37,12 @@
 
         #mushroom-display {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80vw;
-            height: 80vh;
-            max-width: 600px;
-            max-height: 600px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 2;
+            background: transparent;
         }
 
         .controls {
@@ -189,13 +184,13 @@
             alt="Forest slope background"
             camera-controls
             auto-rotate
-            rotation-per-second="15deg"
+            rotation-per-second="10deg"
             shadow-intensity="1"
-            environment-image="neutral"
-            exposure="1"
-            camera-orbit="0deg 75deg 105%"
-            min-camera-orbit="auto auto 5%"
-            max-camera-orbit="auto auto 500%">
+            skybox-image=""
+            exposure="1.2">
+            <div class="progress-bar" slot="progress-bar">
+                <div class="update-bar"></div>
+            </div>
         </model-viewer>
 
         <!-- Mushroom Display (overlay on forest) -->
@@ -208,16 +203,15 @@
             camera-controls
             shadow-intensity="1"
             auto-rotate
-            rotation-per-second="30deg"
-            environment-image="neutral"
-            exposure="1.2"
-            camera-orbit="45deg 75deg 2m"
-            min-camera-orbit="auto auto 0.5m"
-            max-camera-orbit="auto auto 10m"
+            rotation-per-second="20deg"
+            exposure="1.5"
             ios-src="mushroom_pack_1024.usdz">
-            <button slot="ar-button" class="btn-ar" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+            <button slot="ar-button" class="btn-ar">
                 View in AR
             </button>
+            <div class="progress-bar" slot="progress-bar">
+                <div class="update-bar"></div>
+            </div>
         </model-viewer>
     </div>
 
@@ -248,83 +242,113 @@
     <script>
         const forestBackground = document.getElementById('forest-background');
         const mushroomDisplay = document.getElementById('mushroom-display');
-        let displayMode = 'both'; // 'both', 'forest', 'mushrooms'
+        let displayMode = 'mushrooms'; // Start with mushrooms only for better visibility
+        let modelsLoaded = { forest: false, mushrooms: false };
+
+        // Start with mushrooms visible, forest hidden
+        forestBackground.classList.add('hidden');
 
         function toggleDisplayMode() {
             const toggleBtn = document.getElementById('toggle-mode');
 
-            if (displayMode === 'both') {
-                // Show forest only
-                displayMode = 'forest';
-                mushroomDisplay.classList.add('hidden');
-                toggleBtn.textContent = 'Show Both';
-                updateInfoPanel();
-            } else if (displayMode === 'forest') {
-                // Show mushrooms only
-                displayMode = 'mushrooms';
-                forestBackground.classList.add('hidden');
-                mushroomDisplay.classList.remove('hidden');
-                toggleBtn.textContent = 'Show Forest';
-                updateInfoPanel();
-            } else {
+            if (displayMode === 'mushrooms') {
                 // Show both
                 displayMode = 'both';
                 forestBackground.classList.remove('hidden');
                 mushroomDisplay.classList.remove('hidden');
+                toggleBtn.textContent = 'Show Forest Only';
+                updateInfoPanel();
+            } else if (displayMode === 'both') {
+                // Show forest only
+                displayMode = 'forest';
+                mushroomDisplay.classList.add('hidden');
                 toggleBtn.textContent = 'Show Mushrooms Only';
+                updateInfoPanel();
+            } else {
+                // Show mushrooms only
+                displayMode = 'mushrooms';
+                forestBackground.classList.add('hidden');
+                mushroomDisplay.classList.remove('hidden');
+                toggleBtn.textContent = 'Show Both';
                 updateInfoPanel();
             }
         }
 
         function rotateMushrooms() {
             const currentOrbit = mushroomDisplay.getCameraOrbit();
-            mushroomDisplay.cameraOrbit = `${currentOrbit.theta + 45}deg ${currentOrbit.phi}deg ${currentOrbit.radius}m`;
+            const newTheta = (parseFloat(currentOrbit.theta) + 45) % 360;
+            mushroomDisplay.cameraOrbit = `${newTheta}deg ${currentOrbit.phi} ${currentOrbit.radius}`;
         }
 
         function resetView() {
-            if (displayMode === 'forest' || displayMode === 'both') {
-                forestBackground.cameraOrbit = "0deg 75deg 105%";
-            }
-            if (displayMode === 'mushrooms' || displayMode === 'both') {
-                mushroomDisplay.cameraOrbit = "45deg 75deg 2m";
-            }
+            forestBackground.resetTurntableRotation();
+            mushroomDisplay.resetTurntableRotation();
         }
 
         function updateInfoPanel() {
             const infoPanel = document.querySelector('.info-panel');
             let modeText = '';
+            let statusText = '';
 
             if (displayMode === 'both') {
-                modeText = '<span class="mode-indicator">Forest Background Active</span><span class="mode-indicator">Mushrooms Active</span>';
+                modeText = '<span class="mode-indicator">Combined View</span>';
             } else if (displayMode === 'forest') {
-                modeText = '<span class="mode-indicator">Forest Only Mode</span>';
+                modeText = '<span class="mode-indicator">Forest Only</span>';
             } else {
-                modeText = '<span class="mode-indicator">Mushrooms Only Mode</span>';
+                modeText = '<span class="mode-indicator">Mushrooms Only</span>';
+            }
+
+            if (modelsLoaded.forest && modelsLoaded.mushrooms) {
+                statusText = '<span class="mode-indicator" style="background: rgba(76, 175, 80, 0.3);">✓ All Models Loaded</span>';
+            } else {
+                statusText = '<span class="mode-indicator" style="background: rgba(255, 152, 0, 0.3);">⏳ Loading...</span>';
             }
 
             infoPanel.innerHTML = `
-                <div>${modeText}</div>
+                <div>${modeText} ${statusText}</div>
                 <div style="margin-top: 10px;">
-                    Drag to rotate • Pinch/scroll to zoom • AR button to view in augmented reality
+                    Drag to rotate • Pinch/scroll to zoom • Click AR button for augmented reality
                 </div>
             `;
         }
 
         // Initialize
         forestBackground.addEventListener('load', () => {
-            console.log('Forest background loaded successfully');
+            console.log('✓ Forest background loaded successfully');
+            modelsLoaded.forest = true;
+            updateInfoPanel();
+        });
+
+        forestBackground.addEventListener('error', (event) => {
+            console.error('✗ Error loading forest:', event);
+            alert('Failed to load forest model. Check console for details.');
         });
 
         mushroomDisplay.addEventListener('load', () => {
-            console.log('Mushroom pack loaded successfully');
+            console.log('✓ Mushroom pack loaded successfully');
+            modelsLoaded.mushrooms = true;
+            updateInfoPanel();
+        });
+
+        mushroomDisplay.addEventListener('error', (event) => {
+            console.error('✗ Error loading mushrooms:', event);
+            alert('Failed to load mushroom model. Check console for details.');
         });
 
         // Handle AR mode
         mushroomDisplay.addEventListener('ar-status', (event) => {
-            if (event.detail.status === 'session-started') {
-                console.log('AR session started');
-            }
+            console.log('AR Status:', event.detail.status);
         });
+
+        // Update display mode button text initially
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('toggle-mode');
+            toggleBtn.textContent = 'Show Both';
+            updateInfoPanel();
+        });
+
+        console.log('VR Forest Scene Initialized');
+        console.log('Starting with Mushrooms Only view');
     </script>
 </body>
 </html>
