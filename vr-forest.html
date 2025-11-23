@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Forest Mushroom Scene</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2d5016 0%, #1a3010 100%);
+            overflow-x: hidden;
+        }
+
+        .scene-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+        }
+
+        #forest-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #mushroom-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            height: 80vh;
+            max-width: 600px;
+            max-height: 600px;
+            z-index: 2;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls h2 {
+            margin: 0 0 15px 0;
+            color: #2d5016;
+            font-size: 24px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 68, 68, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #4CAF50 0%, #2d7a2f 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-ar {
+            background: linear-gradient(135deg, #2196F3 0%, #0b7dda 100%);
+            color: white;
+        }
+
+        .btn-ar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
+        }
+
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 100;
+            max-width: 90%;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .mode-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .toggle-container {
+            margin: 10px 0;
+        }
+
+        .toggle-label {
+            color: #2d5016;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                top: 10px;
+                padding: 15px 20px;
+            }
+
+            .controls h2 {
+                font-size: 20px;
+            }
+
+            button {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+
+            .info-panel {
+                font-size: 12px;
+                padding: 10px 15px;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="scene-container">
+        <!-- Forest Background -->
+        <model-viewer
+            id="forest-background"
+            src="slope_in_the_forest_1024.usdz"
+            alt="Forest slope background"
+            camera-controls
+            auto-rotate
+            rotation-per-second="15deg"
+            shadow-intensity="1"
+            environment-image="neutral"
+            exposure="1"
+            camera-orbit="0deg 75deg 105%"
+            min-camera-orbit="auto auto 5%"
+            max-camera-orbit="auto auto 500%">
+        </model-viewer>
+
+        <!-- Mushroom Display (overlay on forest) -->
+        <model-viewer
+            id="mushroom-display"
+            src="mushroom_pack_1024.usdz"
+            alt="Mushroom pack"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            camera-controls
+            shadow-intensity="1"
+            auto-rotate
+            rotation-per-second="30deg"
+            environment-image="neutral"
+            exposure="1.2"
+            camera-orbit="45deg 75deg 2m"
+            min-camera-orbit="auto auto 0.5m"
+            max-camera-orbit="auto auto 10m"
+            ios-src="mushroom_pack_1024.usdz">
+            <button slot="ar-button" class="btn-ar" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);">
+                View in AR
+            </button>
+        </model-viewer>
+    </div>
+
+    <div class="controls">
+        <h2>VR Forest Mushroom Scene</h2>
+        <div class="toggle-container">
+            <span class="toggle-label">Display Mode:</span>
+            <button id="toggle-mode" class="btn-secondary" onclick="toggleDisplayMode()">
+                Show Mushrooms Only
+            </button>
+        </div>
+        <div class="button-group">
+            <button class="btn-primary" onclick="rotateMushrooms()">Rotate Mushrooms</button>
+            <button class="btn-secondary" onclick="resetView()">Reset View</button>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <div>
+            <span class="mode-indicator">Forest Background Mode</span>
+            <span class="mode-indicator">Mushroom Pack Loaded</span>
+        </div>
+        <div style="margin-top: 10px;">
+            Drag to rotate • Pinch/scroll to zoom • AR button to view in augmented reality
+        </div>
+    </div>
+
+    <script>
+        const forestBackground = document.getElementById('forest-background');
+        const mushroomDisplay = document.getElementById('mushroom-display');
+        let displayMode = 'both'; // 'both', 'forest', 'mushrooms'
+
+        function toggleDisplayMode() {
+            const toggleBtn = document.getElementById('toggle-mode');
+
+            if (displayMode === 'both') {
+                // Show forest only
+                displayMode = 'forest';
+                mushroomDisplay.classList.add('hidden');
+                toggleBtn.textContent = 'Show Both';
+                updateInfoPanel();
+            } else if (displayMode === 'forest') {
+                // Show mushrooms only
+                displayMode = 'mushrooms';
+                forestBackground.classList.add('hidden');
+                mushroomDisplay.classList.remove('hidden');
+                toggleBtn.textContent = 'Show Forest';
+                updateInfoPanel();
+            } else {
+                // Show both
+                displayMode = 'both';
+                forestBackground.classList.remove('hidden');
+                mushroomDisplay.classList.remove('hidden');
+                toggleBtn.textContent = 'Show Mushrooms Only';
+                updateInfoPanel();
+            }
+        }
+
+        function rotateMushrooms() {
+            const currentOrbit = mushroomDisplay.getCameraOrbit();
+            mushroomDisplay.cameraOrbit = `${currentOrbit.theta + 45}deg ${currentOrbit.phi}deg ${currentOrbit.radius}m`;
+        }
+
+        function resetView() {
+            if (displayMode === 'forest' || displayMode === 'both') {
+                forestBackground.cameraOrbit = "0deg 75deg 105%";
+            }
+            if (displayMode === 'mushrooms' || displayMode === 'both') {
+                mushroomDisplay.cameraOrbit = "45deg 75deg 2m";
+            }
+        }
+
+        function updateInfoPanel() {
+            const infoPanel = document.querySelector('.info-panel');
+            let modeText = '';
+
+            if (displayMode === 'both') {
+                modeText = '<span class="mode-indicator">Forest Background Active</span><span class="mode-indicator">Mushrooms Active</span>';
+            } else if (displayMode === 'forest') {
+                modeText = '<span class="mode-indicator">Forest Only Mode</span>';
+            } else {
+                modeText = '<span class="mode-indicator">Mushrooms Only Mode</span>';
+            }
+
+            infoPanel.innerHTML = `
+                <div>${modeText}</div>
+                <div style="margin-top: 10px;">
+                    Drag to rotate • Pinch/scroll to zoom • AR button to view in augmented reality
+                </div>
+            `;
+        }
+
+        // Initialize
+        forestBackground.addEventListener('load', () => {
+            console.log('Forest background loaded successfully');
+        });
+
+        mushroomDisplay.addEventListener('load', () => {
+            console.log('Mushroom pack loaded successfully');
+        });
+
+        // Handle AR mode
+        mushroomDisplay.addEventListener('ar-status', (event) => {
+            if (event.detail.status === 'session-started') {
+                console.log('AR session started');
+            }
+        });
+    </script>
+</body>
+</html>
