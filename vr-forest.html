@@ -173,6 +173,114 @@
         .hidden {
             display: none;
         }
+
+        /* Mushroom Check Modal */
+        .mushroom-check-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            text-align: center;
+            min-width: 300px;
+            transition: transform 0.3s ease;
+        }
+
+        .mushroom-check-modal.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .mushroom-check-modal h2 {
+            margin: 0 0 20px 0;
+            font-size: 32px;
+        }
+
+        .mushroom-check-modal p {
+            font-size: 20px;
+            margin: 15px 0;
+            color: #333;
+        }
+
+        .mushroom-check-modal.toxic {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+        }
+
+        .mushroom-check-modal.toxic p {
+            color: white;
+        }
+
+        .mushroom-check-modal.edible {
+            background: linear-gradient(135deg, #4CAF50 0%, #2d7a2f 100%);
+            color: white;
+        }
+
+        .mushroom-check-modal.edible p {
+            color: white;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .result-icon {
+            font-size: 80px;
+            margin: 20px 0;
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .fade-out {
+            animation: fadeOut 1s ease forwards;
+        }
+
+        .click-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d5016;
+            z-index: 500;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+        }
     </style>
 </head>
 <body>
@@ -235,8 +343,22 @@
             <span class="mode-indicator">Mushroom Pack Loaded</span>
         </div>
         <div style="margin-top: 10px;">
-            Drag to rotate • Pinch/scroll to zoom • AR button to view in augmented reality
+            <strong>Click the mushroom to check if it's safe to eat!</strong><br>
+            Drag to rotate • Pinch/scroll to zoom • AR button for augmented reality
         </div>
+    </div>
+
+    <!-- Click Hint -->
+    <div id="click-hint" class="click-hint">
+        👆 Click the Mushroom!
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <!-- Mushroom Check Modal -->
+    <div id="mushroom-check-modal" class="mushroom-check-modal">
+        <div id="modal-content"></div>
     </div>
 
     <script>
@@ -349,6 +471,100 @@
 
         console.log('VR Forest Scene Initialized');
         console.log('Starting with Mushrooms Only view');
+
+        // Mushroom Click Detection and Toxicity Check
+        const clickHint = document.getElementById('click-hint');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const mushroomCheckModal = document.getElementById('mushroom-check-modal');
+        const modalContent = document.getElementById('modal-content');
+        let hasClickedMushroom = false;
+
+        // Hide click hint after 5 seconds
+        setTimeout(() => {
+            clickHint.style.display = 'none';
+        }, 5000);
+
+        // Add click event to mushroom display
+        mushroomDisplay.addEventListener('click', () => {
+            if (!hasClickedMushroom) {
+                hasClickedMushroom = true;
+                clickHint.style.display = 'none';
+            }
+            checkMushroom();
+        });
+
+        function checkMushroom() {
+            // Randomly determine if mushroom is toxic (30% chance of toxic)
+            const isToxic = Math.random() < 0.3;
+
+            // Stop auto-rotation for dramatic effect
+            mushroomDisplay.autoRotate = false;
+
+            if (isToxic) {
+                showToxicResult();
+            } else {
+                showEdibleResult();
+            }
+        }
+
+        function showToxicResult() {
+            mushroomCheckModal.className = 'mushroom-check-modal toxic show';
+            modalContent.innerHTML = `
+                <div class="result-icon">☠️</div>
+                <h2>TOXIC!</h2>
+                <p>This mushroom is poisonous!</p>
+                <p style="font-size: 16px;">It will disappear in 3 seconds...</p>
+            `;
+            modalOverlay.classList.add('show');
+
+            // Fade out and hide mushroom after 3 seconds
+            setTimeout(() => {
+                modalOverlay.classList.remove('show');
+                mushroomCheckModal.classList.remove('show');
+
+                // Add fade out animation
+                mushroomDisplay.classList.add('fade-out');
+
+                setTimeout(() => {
+                    mushroomDisplay.style.display = 'none';
+
+                    // Show message
+                    const infoPanel = document.querySelector('.info-panel');
+                    infoPanel.innerHTML = `
+                        <div style="font-size: 18px; color: #ff4444;">
+                            <strong>☠️ Toxic mushroom removed!</strong><br>
+                            Reload the page to try again.
+                        </div>
+                        <button onclick="location.reload()" style="margin-top: 10px; padding: 10px 20px; border: none; border-radius: 5px; background: #4CAF50; color: white; cursor: pointer;">
+                            Try Again
+                        </button>
+                    `;
+                }, 1000);
+            }, 3000);
+        }
+
+        function showEdibleResult() {
+            mushroomCheckModal.className = 'mushroom-check-modal edible show';
+            modalContent.innerHTML = `
+                <div class="result-icon">✅</div>
+                <h2>EDIBLE!</h2>
+                <p>This mushroom is safe to eat!</p>
+                <p style="font-size: 16px;">Taking you to the kitchen...</p>
+            `;
+            modalOverlay.classList.add('show');
+
+            // Transition to kitchen scene after 2 seconds
+            setTimeout(() => {
+                window.location.href = 'kitchen.html';
+            }, 2000);
+        }
+
+        // Close modal when clicking overlay
+        modalOverlay.addEventListener('click', () => {
+            modalOverlay.classList.remove('show');
+            mushroomCheckModal.classList.remove('show');
+            mushroomDisplay.autoRotate = true;
+        });
     </script>
 </body>
 </html>
