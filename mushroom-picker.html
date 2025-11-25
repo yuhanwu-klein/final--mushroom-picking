@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Mushroom Picker - Interactive Experience</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Scene Container */
+        .scene {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .scene.active {
+            display: block;
+        }
+
+        /* Forest Scene Styles */
+        #forest-scene {
+            background: linear-gradient(135deg, #2d5016 0%, #1a3010 100%);
+        }
+
+        .scene-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            --progress-bar-color: #4CAF50;
+        }
+
+        #forest-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #mushroom-display {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls h2 {
+            margin: 0 0 15px 0;
+            color: #2d5016;
+            font-size: 24px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 68, 68, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #4CAF50 0%, #2d7a2f 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-ar {
+            background: linear-gradient(135deg, #2196F3 0%, #0b7dda 100%);
+            color: white;
+        }
+
+        .btn-ar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
+        }
+
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 100;
+            max-width: 90%;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .mode-indicator {
+            display: inline-block;
+            padding: 5px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Mushroom Check Modal */
+        .mushroom-check-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            text-align: center;
+            min-width: 300px;
+            transition: transform 0.3s ease;
+        }
+
+        .mushroom-check-modal.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .mushroom-check-modal h2 {
+            margin: 0 0 20px 0;
+            font-size: 32px;
+        }
+
+        .mushroom-check-modal p {
+            font-size: 20px;
+            margin: 15px 0;
+            color: #333;
+        }
+
+        .mushroom-check-modal.toxic {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+        }
+
+        .mushroom-check-modal.toxic p {
+            color: white;
+        }
+
+        .mushroom-check-modal.edible {
+            background: linear-gradient(135deg, #4CAF50 0%, #2d7a2f 100%);
+            color: white;
+        }
+
+        .mushroom-check-modal.edible p {
+            color: white;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .result-icon {
+            font-size: 80px;
+            margin: 20px 0;
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .fade-out {
+            animation: fadeOut 1s ease forwards;
+        }
+
+        .click-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d5016;
+            z-index: 500;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        /* Kitchen Scene Styles */
+        #kitchen-scene {
+            background: linear-gradient(135deg, #f5f5dc 0%, #deb887 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .kitchen-content {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 60px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            animation: slideIn 0.8s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .kitchen-icon {
+            font-size: 120px;
+            margin-bottom: 20px;
+            animation: kitchenBounce 1s ease infinite;
+        }
+
+        @keyframes kitchenBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .kitchen-content h1 {
+            color: #2d5016;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .kitchen-content p {
+            font-size: 24px;
+            color: #555;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        .recipe-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6a00 100%);
+            border-radius: 15px;
+            color: white;
+        }
+
+        .recipe-section h2 {
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+
+        .recipe-list {
+            text-align: left;
+            font-size: 18px;
+            line-height: 2;
+        }
+
+        .recipe-list li {
+            list-style: none;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .recipe-list li:before {
+            content: "🍄";
+            position: absolute;
+            left: 0;
+        }
+
+        .btn-cook {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
+        .btn-cook:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-back {
+            background: linear-gradient(135deg, #4CAF50 0%, #2d7a2f 100%);
+            color: white;
+        }
+
+        .btn-back:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .cooking-animation {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .cooking-animation.active {
+            display: flex;
+        }
+
+        .cooking-pot {
+            font-size: 150px;
+            animation: cookingBounce 0.5s ease infinite;
+        }
+
+        @keyframes cookingBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .cooking-text {
+            color: white;
+            font-size: 32px;
+            margin-top: 30px;
+            animation: cookingPulse 1s ease infinite;
+        }
+
+        @keyframes cookingPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .dish-complete {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
+            z-index: 1001;
+            text-align: center;
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: translate(-50%, -50%) scale(0);
+            }
+            to {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .dish-complete.show {
+            display: block;
+        }
+
+        .dish-icon {
+            font-size: 100px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                top: 10px;
+                padding: 15px 20px;
+            }
+
+            .controls h2 {
+                font-size: 20px;
+            }
+
+            button {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+
+            .info-panel {
+                font-size: 12px;
+                padding: 10px 15px;
+            }
+
+            .kitchen-content {
+                padding: 30px 40px;
+                max-width: 90%;
+            }
+
+            .kitchen-content h1 {
+                font-size: 36px;
+            }
+
+            .kitchen-icon {
+                font-size: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- FOREST SCENE -->
+    <div id="forest-scene" class="scene active">
+        <div class="scene-container">
+            <!-- Forest Background -->
+            <model-viewer
+                id="forest-background"
+                src="slope_in_the_forest_1024.usdz"
+                alt="Forest slope background"
+                camera-controls
+                auto-rotate
+                rotation-per-second="10deg"
+                shadow-intensity="1"
+                skybox-image=""
+                exposure="1.2">
+            </model-viewer>
+
+            <!-- Mushroom Display -->
+            <model-viewer
+                id="mushroom-display"
+                src="mushroom_pack_1024.usdz"
+                alt="Mushroom pack"
+                ar
+                ar-modes="webxr scene-viewer quick-look"
+                camera-controls
+                shadow-intensity="1"
+                auto-rotate
+                rotation-per-second="20deg"
+                exposure="1.5"
+                ios-src="mushroom_pack_1024.usdz">
+                <button slot="ar-button" class="btn-ar">
+                    View in AR
+                </button>
+            </model-viewer>
+        </div>
+
+        <div class="controls">
+            <h2>VR Forest Mushroom Scene</h2>
+            <div class="button-group">
+                <button class="btn-secondary" onclick="resetForestView()">Reset View</button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div>
+                <span class="mode-indicator">Mushrooms Loaded</span>
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>👆 Click the mushroom to check if it's safe to eat!</strong><br>
+                Drag to rotate • Pinch/scroll to zoom
+            </div>
+        </div>
+
+        <!-- Click Hint -->
+        <div id="click-hint" class="click-hint">
+            👆 Click the Mushroom!
+        </div>
+    </div>
+
+    <!-- KITCHEN SCENE -->
+    <div id="kitchen-scene" class="scene">
+        <div class="kitchen-content">
+            <div class="kitchen-icon">🍳</div>
+            <h1>Welcome to the Kitchen!</h1>
+            <p>Congratulations! You found an edible mushroom!</p>
+            <p style="color: #4CAF50; font-weight: bold;">Now let's cook something delicious!</p>
+
+            <div class="recipe-section">
+                <h2>Mushroom Recipe Ideas:</h2>
+                <ul class="recipe-list">
+                    <li>Creamy Mushroom Pasta</li>
+                    <li>Mushroom Risotto</li>
+                    <li>Grilled Mushroom Skewers</li>
+                    <li>Mushroom Soup</li>
+                    <li>Stuffed Mushrooms</li>
+                </ul>
+            </div>
+
+            <div class="button-group" style="margin-top: 30px;">
+                <button class="btn-cook" onclick="startCooking()">Start Cooking!</button>
+                <button class="btn-back" onclick="backToForest()">Find More Mushrooms</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <!-- Mushroom Check Modal -->
+    <div id="mushroom-check-modal" class="mushroom-check-modal">
+        <div id="modal-content"></div>
+    </div>
+
+    <!-- Cooking Animation -->
+    <div id="cooking-animation" class="cooking-animation">
+        <div class="cooking-pot">🍲</div>
+        <div class="cooking-text">Cooking your mushroom dish...</div>
+    </div>
+
+    <!-- Dish Complete -->
+    <div id="dish-complete" class="dish-complete">
+        <div class="dish-icon">🍽️</div>
+        <h2 style="color: #2d5016; font-size: 36px; margin-bottom: 20px;">Dish Complete!</h2>
+        <p style="font-size: 24px; color: #555; margin-bottom: 30px;">Your delicious mushroom dish is ready to serve!</p>
+        <div style="font-size: 80px; margin: 20px 0;">🍄✨</div>
+        <div class="button-group">
+            <button class="btn-cook" onclick="startCooking()">Cook Another</button>
+            <button class="btn-back" onclick="backToForest()">Find More Mushrooms</button>
+        </div>
+    </div>
+
+    <script>
+        // Scene Management
+        function switchToScene(sceneName) {
+            document.querySelectorAll('.scene').forEach(scene => {
+                scene.classList.remove('active');
+            });
+            document.getElementById(sceneName).classList.add('active');
+        }
+
+        // Forest Scene Logic
+        const forestBackground = document.getElementById('forest-background');
+        const mushroomDisplay = document.getElementById('mushroom-display');
+        const clickHint = document.getElementById('click-hint');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const mushroomCheckModal = document.getElementById('mushroom-check-modal');
+        const modalContent = document.getElementById('modal-content');
+        let hasClickedMushroom = false;
+
+        // Start with forest hidden
+        forestBackground.classList.add('hidden');
+
+        // Hide click hint after 5 seconds
+        setTimeout(() => {
+            clickHint.style.display = 'none';
+        }, 5000);
+
+        // Add click event to mushroom display
+        mushroomDisplay.addEventListener('click', () => {
+            if (!hasClickedMushroom) {
+                hasClickedMushroom = true;
+                clickHint.style.display = 'none';
+            }
+            checkMushroom();
+        });
+
+        function checkMushroom() {
+            const isToxic = Math.random() < 0.3;
+            mushroomDisplay.autoRotate = false;
+
+            if (isToxic) {
+                showToxicResult();
+            } else {
+                showEdibleResult();
+            }
+        }
+
+        function showToxicResult() {
+            mushroomCheckModal.className = 'mushroom-check-modal toxic show';
+            modalContent.innerHTML = `
+                <div class="result-icon">☠️</div>
+                <h2>TOXIC!</h2>
+                <p>This mushroom is poisonous!</p>
+                <p style="font-size: 16px;">It will disappear in 3 seconds...</p>
+            `;
+            modalOverlay.classList.add('show');
+
+            setTimeout(() => {
+                modalOverlay.classList.remove('show');
+                mushroomCheckModal.classList.remove('show');
+                mushroomDisplay.classList.add('fade-out');
+
+                setTimeout(() => {
+                    mushroomDisplay.style.display = 'none';
+                    document.querySelector('.info-panel').innerHTML = `
+                        <div style="font-size: 18px; color: #ff4444;">
+                            <strong>☠️ Toxic mushroom removed!</strong><br>
+                            Reload the page to try again.
+                        </div>
+                        <button onclick="resetGame()" class="btn-secondary" style="margin-top: 10px; padding: 10px 20px;">
+                            Try Again
+                        </button>
+                    `;
+                }, 1000);
+            }, 3000);
+        }
+
+        function showEdibleResult() {
+            mushroomCheckModal.className = 'mushroom-check-modal edible show';
+            modalContent.innerHTML = `
+                <div class="result-icon">✅</div>
+                <h2>EDIBLE!</h2>
+                <p>This mushroom is safe to eat!</p>
+                <p style="font-size: 16px;">Taking you to the kitchen...</p>
+            `;
+            modalOverlay.classList.add('show');
+
+            setTimeout(() => {
+                modalOverlay.classList.remove('show');
+                mushroomCheckModal.classList.remove('show');
+                switchToScene('kitchen-scene');
+            }, 2000);
+        }
+
+        function resetForestView() {
+            forestBackground.resetTurntableRotation();
+            mushroomDisplay.resetTurntableRotation();
+        }
+
+        function resetGame() {
+            location.reload();
+        }
+
+        modalOverlay.addEventListener('click', () => {
+            modalOverlay.classList.remove('show');
+            mushroomCheckModal.classList.remove('show');
+            mushroomDisplay.autoRotate = true;
+        });
+
+        // Kitchen Scene Logic
+        const cookingAnimation = document.getElementById('cooking-animation');
+        const dishComplete = document.getElementById('dish-complete');
+
+        function startCooking() {
+            cookingAnimation.classList.add('active');
+            dishComplete.classList.remove('show');
+
+            setTimeout(() => {
+                cookingAnimation.classList.remove('active');
+                dishComplete.classList.add('show');
+            }, 3000);
+        }
+
+        function backToForest() {
+            resetGame();
+        }
+
+        // Model Loading
+        mushroomDisplay.addEventListener('load', () => {
+            console.log('✓ Mushroom pack loaded successfully');
+        });
+
+        mushroomDisplay.addEventListener('error', (event) => {
+            console.error('✗ Error loading mushrooms:', event);
+        });
+
+        forestBackground.addEventListener('load', () => {
+            console.log('✓ Forest background loaded');
+        });
+
+        console.log('VR Mushroom Picker initialized');
+    </script>
+</body>
+</html>

@@ -1,19 +1,31 @@
-# AR Mushroom Garden 🍄
+# VR Mushroom Picker - Interactive Experience 🍄
 
-An interactive augmented reality experience featuring colorful, procedurally generated 3D mushrooms built with Three.js and WebXR.
+An immersive virtual reality mushroom picking game featuring realistic USDZ 3D models, interactive toxicity checking, and a virtual kitchen cooking experience. Also includes a procedurally generated AR mushroom garden built with Three.js and WebXR.
 
-## Features
+## 🎮 Main Features
 
-- **Colorful Mushroom Generation**: Procedurally generated mushrooms with 8 unique color schemes
-- **Interactive 3D View**: Rotate, zoom, and explore the mushroom garden
-- **AR Mode**: Place mushrooms in your real environment using WebXR (on supported devices)
-- **Dynamic Animations**: Gentle bobbing animations bring the mushrooms to life
-- **Realistic Details**: Each mushroom includes:
-  - Textured stems
-  - Spotted caps
-  - Gills underneath
-  - Randomized sizes and orientations
-  - Realistic shadows
+### **Mushroom Picker Game** (mushroom-picker.html)
+The complete interactive experience in a single HTML file:
+- **VR Forest Scene**: Explore a forest with realistic USDZ mushroom models
+- **Click to Check**: Click mushrooms to determine if they're toxic or edible
+- **Toxicity System**: 30% chance toxic (mushroom disappears), 70% chance edible (go to kitchen)
+- **Kitchen Scene**: Cook your edible mushrooms with animated cooking experience
+- **Recipe Ideas**: 5 different mushroom recipes to try
+- **AR Support**: View mushrooms in augmented reality on iOS/Android devices
+
+### **VR Forest Scene** (vr-forest.html)
+- Uses `slope_in_the_forest_1024.usdz` as immersive background
+- Displays `mushroom_pack_1024.usdz` interactive mushroom models
+- Click-to-check toxicity feature
+- Smooth transitions between scenes
+- Mobile-responsive design
+
+### **AR Mushroom Garden** (index.html)
+- Procedurally generated mushrooms with 8 unique color schemes
+- Interactive 3D View: Rotate, zoom, and explore
+- AR Mode: Place mushrooms in your real environment
+- Dynamic animations with gentle bobbing effects
+- Realistic shadows and lighting
 
 ## Color Schemes
 
@@ -29,10 +41,20 @@ The mushrooms come in various vibrant color combinations:
 
 ## Usage
 
-### Quick Start
+### Quick Start - Mushroom Picker Game
+
+1. Open `mushroom-picker.html` in a modern web browser (best on Safari for iOS or Chrome for Android)
+2. **Click the mushroom** in the forest to check if it's safe
+3. **If Toxic** (☠️): Mushroom disappears, click "Try Again" to reload
+4. **If Edible** (✅): Automatically transported to the kitchen
+5. **In Kitchen**: Click "Start Cooking!" to prepare your mushroom dish
+6. **Cook and Enjoy**: Watch the cooking animation and see your completed dish!
+
+### Quick Start - AR Mushroom Garden
 
 1. Open `index.html` in a modern web browser
-2. Use the control panel to interact with the scene:
+2. Click **"🍄 Play Mushroom Picker Game"** for the full interactive experience
+3. Or use the control panel to interact with procedurally generated mushrooms:
    - **Add Random Mushroom**: Spawn a single mushroom at a random location
    - **Add Cluster**: Create a group of mushrooms with matching colors
    - **Clear All**: Remove all mushrooms from the scene
@@ -40,9 +62,10 @@ The mushrooms come in various vibrant color combinations:
 
 ### Controls
 
+- **Click**: Check mushroom toxicity (in VR scenes)
 - **Mouse/Touch Drag**: Rotate the camera view
 - **Mouse Wheel/Pinch**: Zoom in and out
-- **Buttons**: Use the on-screen controls to add or remove mushrooms
+- **Buttons**: Use the on-screen controls to interact
 
 ### AR Mode
 
@@ -66,10 +89,22 @@ To use AR features:
 
 ```
 final--mushroom-picking/
-├── index.html          # Main HTML page
-├── mushroom-ar.js      # Core Three.js and AR logic
-└── README.md          # This file
+├── index.html                      # Main landing page with procedural mushrooms
+├── mushroom-picker.html            # 🎮 Complete game (all-in-one file)
+├── vr-forest.html                  # VR forest scene with toxicity checker
+├── kitchen.html                    # Kitchen cooking scene
+├── test-models.html                # USDZ model testing page
+├── mushroom-ar.js                  # Core Three.js and AR logic
+├── slope_in_the_forest_1024.usdz   # Forest background 3D model (23MB)
+├── mushroom_pack_1024.usdz         # Mushroom 3D model (2.8MB)
+└── README.md                       # This file
 ```
+
+### Recommended Starting Points
+
+1. **For the full game experience**: Open `mushroom-picker.html`
+2. **For testing models**: Open `test-models.html` to see each USDZ model separately
+3. **For procedural generation**: Open `index.html` for the Three.js mushroom garden
 
 ### Mushroom Generation
 
